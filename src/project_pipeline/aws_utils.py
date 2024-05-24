@@ -1,6 +1,7 @@
 import os
 import logging
 import boto3
+from pathlib import Path
 logger = logging.getLogger(__name__)
 
 """
@@ -69,3 +70,53 @@ def upload_directory_to_s3(bucket_name, local_directory, root_directory):
             # Perform the upload
             s3_client.upload_file(local_path, bucket_name, s3_path)
     return True
+
+
+def upload_artifacts(access_key, secret_key, region, artifacts: Path, config: dict) -> list:
+    """Upload all the artifacts in the specified directory to S3
+    Args:
+        artifacts: Directory containing all the artifacts from a given experiment
+        config: Config required to upload artifacts to S3; see example config file for structure
+    Returns:
+        List of S3 URIs for each file that was uploaded
+    """
+
+    # Create a Boto3 session using AWS credentials from the default profile
+    session = boto3.Session(
+    aws_access_key_id=access_key,
+    aws_secret_access_key=secret_key,
+    region_name= region
+    )
+
+    # Explicitly specify the use of standard AWS credentials by setting use_ssl=False
+    s3_client = session.client("s3", use_ssl=False)
+    bucket_name = config["bucket_name"]
+    prefix = config["prefix"]
+    print(bucket_name)
+    s3_uris = []
+
+    # Function to upload files recursively
+    def upload_files(directory, prefix):
+        for file_path in directory.iterdir():
+            if file_path.is_file():
+                # Extract the directory name (experiment ID) from the path
+                experiment_id = directory.stem
+                s3_key = f"{prefix}_{experiment_id}/{file_path.name}"
+                print(s3_key)
+                try:
+                    s3_client.upload_file(str(file_path), bucket_name, s3_key)
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    pass
+                else:
+                    s3_uri = f"s3://{bucket_name}/{s3_key}"
+                    s3_uris.append(s3_uri)
+            elif file_path.is_dir():
+                upload_files(file_path, prefix)
+
+    upload_files(artifacts, prefix)
+    
+    return s3_uris
+    
+    return s3_uris

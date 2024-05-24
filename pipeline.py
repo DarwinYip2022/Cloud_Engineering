@@ -1,15 +1,21 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 import pandas as pd
-import project_pipeline.load_config as lc
-import project_pipeline.data_loader as dl
-import project_pipeline.eda as eda
-import project_pipeline.model_training as mt
-import project_pipeline.save_artifacts as sa
-import project_pipeline.aws_utils as aws
+import src.project_pipeline.load_config as lc
+import src.project_pipeline.data_loader as dl
+import src.project_pipeline.eda as eda
+import src.project_pipeline.model_training as mt
+import src.project_pipeline.save_artifacts as sa
+import src.project_pipeline.aws_utils as aws
 
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config/default.yaml")
 config = lc.load_config(Path(CONFIG_PATH))
+
+load_dotenv()
+aws_access_key = os.getenv("aws_access_key_id")
+aws_secret_access_key = os.getenv("aws_secret_access_key")
+aws_region = os.getenv("aws_region")
 
 MODEL_CONFIG = config["model_building"]
 TRAIN_TEST_SPLIT = config["train_test_config"]
@@ -69,5 +75,5 @@ sa.save_data(df_final, Path(DATA_BEFORE_TRAIN_PATH))    # data before train_test
 sa.save_data(train_test_data[1], Path(TRAIN_DATA_PATH)) # train_data
 sa.save_data(train_test_data[2], Path(TEST_DATA_PATH))  # test data
 
-aws.upload_directory_to_s3(config["aws"]["bucket_name"], './artifacts', 'artifacts')
+aws.upload_artifacts(aws_access_key, aws_secret_access_key, aws_region, artifacts, config['aws'])
 print("Uploaded!")
