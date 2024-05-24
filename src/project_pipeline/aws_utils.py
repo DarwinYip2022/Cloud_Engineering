@@ -4,73 +4,6 @@ import boto3
 from pathlib import Path
 logger = logging.getLogger(__name__)
 
-"""
-session = boto3.session.Session(profile_name = 'zzp8676')
-
-s3 = session.client("s3")
-print(s3.list_buckets().get("Buckets", []))
-
-
-def upload_files_to_s3(bucket_name: str, prefix: str, directory: Path) -> bool:
-    # Check for AWS credentials
-    try:
-        session = boto3.Session()
-        s3 = session.client("s3")
-    except Exception as e:
-        logger.error("Failed to create boto3 session: %s", e)
-        return False
-
-    # Check if bucket exists
-    try:
-        s3.head_bucket(Bucket=bucket_name)
-    except Exception as e:
-        logger.error(
-            "The bucket '%s' does not exist or you do not have permission to access it",
-            bucket_name,
-        )
-        logger.error(e)
-        return False
-
-    # Iterate through files in directory and upload to S3
-    for file_path in directory.glob("*"):
-        if file_path.is_file():
-            try:
-                key = str(
-                    Path(prefix) / Path(file_path.name)
-                )  # Use prefix instead of file parent
-                with file_path.open("rb") as data:
-                    s3.upload_fileobj(data, bucket_name, key)
-                logger.debug(
-                    "File '%s' uploaded to S3 bucket '%s'", file_path.name, bucket_name
-                )
-            except Exception as e:
-                logger.error("Failed to upload file '%s': %s", file_path.name, e)
-                return False
-
-    return True
-"""
-def upload_directory_to_s3(bucket_name, local_directory, root_directory):
-    """
-    Uploads a directory to an S3 bucket, preserving the folder structure.
-
-    :param bucket_name: str. Name of the S3 bucket.
-    :param local_directory: str. The local directory to upload.
-    :param root_directory: str. Root directory prefix to be added in S3.
-    """
-    s3_client = boto3.client('s3')
-    # Walk through the local directory
-    for root, _, files in os.walk(local_directory):
-        for filename in files:
-            # construct the full local path
-            local_path = os.path.join(root, filename)
-            # construct the full S3 path
-            relative_path = os.path.relpath(local_path, local_directory)
-            s3_path = os.path.join(root_directory, relative_path)
-            logger.info("Uploading %s to %s/%s", local_path, bucket_name, s3_path)
-            # Perform the upload
-            s3_client.upload_file(local_path, bucket_name, s3_path)
-    return True
-
 
 def upload_artifacts(access_key, secret_key, region, artifacts: Path, config: dict) -> list:
     """Upload all the artifacts in the specified directory to S3
@@ -118,5 +51,54 @@ def upload_artifacts(access_key, secret_key, region, artifacts: Path, config: di
     upload_files(artifacts, prefix)
     
     return s3_uris
-    
-    return s3_uris
+
+
+def load_from_s3(access_key, secret_key, region, bucket_name):
+    """
+    Lists the contents of an S3 bucket and downloads files based on provided credentials.
+    """
+    try:
+        session = boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region
+        )
+        s3_client = session.client("s3")
+        
+        # List objects in the bucket
+        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                file_key = obj['Key']
+                logger.info("Attempting to download file from S3 key: %s", file_key)
+                
+                # Determine the local directory based on file extension
+                if file_key.endswith("/"):  # Skip directories
+                    continue
+                elif file_key.endswith(".pkl"):
+                    local_directory = "models/"
+                elif file_key.endswith(".csv"):
+                    local_directory = "data/"
+                else:
+                    local_directory = "./"  # Default to current directory if the file type is not recognized
+                
+                # Ensure the local directory exists
+                os.makedirs(local_directory, exist_ok=True)
+                
+                try:
+                    # Determine the local file path based on the file type
+                    file_name = file_key.split("/")[-1]
+                    local_file_name = os.path.join(local_directory, file_name)
+                    
+                    # Download the file from S3
+                    s3_client.download_file(bucket_name, file_key, local_file_name)
+                    
+                    logger.info("Downloaded and saved %s to %s", file_key, local_file_name)
+                except Exception as e:
+                    logger.error("Error downloading file %s from S3: %s", file_key, e)
+        
+        logger.info("All files downloaded from S3")
+        
+    except Exception as e:
+        logger.error("Error accessing S3 bucket: %s", e)
