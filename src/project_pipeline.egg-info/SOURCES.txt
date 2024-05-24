@@ -1,0 +1,13 @@
+setup.py
+project_pipeline/__init__.py
+project_pipeline/aws_utils.py
+project_pipeline/data_loader.py
+project_pipeline/eda.py
+project_pipeline/load_config.py
+project_pipeline/model_training.py
+project_pipeline/save_artifacts.py
+project_pipeline.egg-info/PKG-INFO
+project_pipeline.egg-info/SOURCES.txt
+project_pipeline.egg-info/dependency_links.txt
+project_pipeline.egg-info/requires.txt
+project_pipeline.egg-info/top_level.txt

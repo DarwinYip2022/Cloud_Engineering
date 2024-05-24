@@ -1,0 +1,38 @@
+data_loader:
+  path: "./data/amazon.csv"
+
+train_test_config:
+  test_size: 0.2
+  random_state: 77
+  training_cols: ['user_id', 'product_id', 'rating']
+
+model_building:
+
+  - CF:
+    - model:
+      name: "KNNBasic"
+      params:
+        k: 40
+        sim_options:
+          name: "cosine"
+          user_based: false
+
+    - model:
+      name: "SVD"
+      params:
+        n_factors: [50,100,200]
+        lr_all: [0.002,0.005, 0.01]
+        reg_all: [0.02, 0.04, 0.06]
+  
+  - CBF:
+    - model:
+      numeric_params: ['discounted_price', 'discount_percentage']
+      text_params: 'review_title'
+
+aws:
+  bucket_name: ce-project
+      
+
+
+    
+  
