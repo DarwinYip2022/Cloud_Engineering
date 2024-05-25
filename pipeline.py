@@ -14,10 +14,12 @@ import src.project_pipeline.aws_utils as aws
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load configuration and environment variables
-load_dotenv()
+
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config/default.yaml")
 config = lc.load_config(Path(CONFIG_PATH))
+
+# Load configuration and environment variables
+load_dotenv()
 aws_access_key = os.getenv("aws_access_key_id")
 aws_secret_access_key = os.getenv("aws_secret_access_key")
 aws_region = os.getenv("aws_region")
@@ -66,8 +68,3 @@ logger.info("Uploading artifacts to AWS S3...")
 aws.upload_artifacts(aws_access_key, aws_secret_access_key, aws_region, artifacts, config['aws'])
 
 logger.info("Uploaded artifacts!")
-
-logger.info("Downloading artifacts from AWS S3...")
-aws.load_from_s3(aws_access_key, aws_secret_access_key, aws_region, config["aws"]["bucket_name"])
-
-logger.info("All artifacts downloaded from AWS S3.")

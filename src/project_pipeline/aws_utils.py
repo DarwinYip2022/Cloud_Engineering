@@ -52,53 +52,54 @@ def upload_artifacts(access_key, secret_key, region, artifacts: Path, config: di
     
     return s3_uris
 
-
-def load_from_s3(access_key, secret_key, region, bucket_name):
+def load_from_s3(access_key, secret_key, region, bucket_name, target_directories):
     """
-    Lists the contents of an S3 bucket and downloads files based on provided credentials.
+    Downloads directories from specified prefixes within an S3 bucket to a local 'artifacts' folder,
+    stripping the 'artifacts_' prefix from the directory names.
+
+    Parameters:
+        access_key (str): AWS access key ID.
+        secret_key (str): AWS secret access key.
+        region (str): AWS region.
+        bucket_name (str): Name of the S3 bucket.
+        target_directories (list): List of directory prefixes to include in the download.
     """
     try:
+        # Set up the logging
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logger = logging.getLogger()
+
+        # Create a session with AWS
         session = boto3.Session(
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region
         )
         s3_client = session.client("s3")
-        
-        # List objects in the bucket
-        response = s3_client.list_objects_v2(Bucket=bucket_name)
-        
-        if 'Contents' in response:
-            for obj in response['Contents']:
-                file_key = obj['Key']
-                logger.info("Attempting to download file from S3 key: %s", file_key)
-                
-                # Determine the local directory based on file extension
-                if file_key.endswith("/"):  # Skip directories
-                    continue
-                elif file_key.endswith(".pkl"):
-                    local_directory = "models/"
-                elif file_key.endswith(".csv"):
-                    local_directory = "data/"
-                else:
-                    local_directory = "./"  # Default to current directory if the file type is not recognized
-                
-                # Ensure the local directory exists
-                os.makedirs(local_directory, exist_ok=True)
-                
-                try:
-                    # Determine the local file path based on the file type
-                    file_name = file_key.split("/")[-1]
-                    local_file_name = os.path.join(local_directory, file_name)
-                    
-                    # Download the file from S3
-                    s3_client.download_file(bucket_name, file_key, local_file_name)
-                    
-                    logger.info("Downloaded and saved %s to %s", file_key, local_file_name)
-                except Exception as e:
-                    logger.error("Error downloading file %s from S3: %s", file_key, e)
-        
-        logger.info("All files downloaded from S3")
-        
+
+        # Base local directory
+        base_directory = Path("s3_artifacts")
+
+        # Download each specified directory and its contents
+        for prefix in target_directories:
+            paginator = s3_client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        file_key = obj['Key']
+                        if not file_key.endswith("/"):  # Skip directories
+                            # Remove the 'artifacts_' prefix from the S3 key
+                            local_key = file_key[10:] if file_key.startswith("artifacts_") else file_key
+                            local_file_path = base_directory / local_key
+                            local_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+
+                            # Download the file from S3
+                            s3_client.download_file(bucket_name, file_key, str(local_file_path))
+                            logger.info("Downloaded and saved %s to %s", file_key, local_file_path)
+
+        logger.info("All relevant files downloaded from S3")
+
     except Exception as e:
         logger.error("Error accessing S3 bucket: %s", e)
+
+
