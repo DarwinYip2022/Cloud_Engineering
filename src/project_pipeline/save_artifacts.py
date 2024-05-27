@@ -1,7 +1,8 @@
+""" Module to save data and models"""
+import logging
 from pathlib import Path
 import pickle
 import pandas as pd
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ def save_model(best_model, model_filename: Path):
     """
 
     # Make sure the parent directory is created
-    model_filename.parent.mkdir(exist_ok=True, parents=True)  # Ensures all parent directories are created if necessary
+    model_filename.parent.mkdir(exist_ok=True, parents=True)
 
     # Save the best model
     with open(model_filename, 'wb') as file:
@@ -24,10 +25,17 @@ def save_model(best_model, model_filename: Path):
 
 
 
-def save_data(df: pd.DataFrame, data_file: Path):
+def save_data(data: pd.DataFrame, data_file: Path):
+    """
+    Saves the data to the specified path using pickle.
+
+    Parameters:
+        data: data to be saved.
+        model_filename (Path): The path (including filename) where the data should be saved.
+    """
     # make sure the parent directory is created
     data_file.parent.mkdir(exist_ok=True)
 
     # Save the best model
-    df.to_pickle(data_file)
-    logger.info("Save the artifacts %s to path %s successfully!", df, data_file)
+    data.to_pickle(data_file)
+    logger.info("Save the artifacts %s to path %s successfully!", data, data_file)

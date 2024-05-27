@@ -1,28 +1,47 @@
+""" Module to perform EDA"""
 from typing import Tuple
 import pandas as pd
 
 
-def data_preprocess(df: pd.DataFrame):
+def data_preprocess(data: pd.DataFrame) -> pd.DataFrame:
+    """Preprocesses the input DataFrame.
 
-    df.fillna(value=pd.NA, inplace=True)  # Fill missing values with 'NA'
-    df['discounted_price'] = df['discounted_price'].str.replace('₹', '').str.replace(',', '').astype(float)
-    df['actual_price'] = df['actual_price'].str.replace('₹', '').str.replace(',', '').astype(float)
+    Args:
+        data (pd.DataFrame): Input DataFrame to be preprocessed.
 
-    df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
-    df.dropna(inplace=True)
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame.
+    """
+    data.fillna(value=pd.NA, inplace=True)  # Fill missing values with 'NA'
+    data['discounted_price'] = data['discounted_price'].str.replace(
+        '₹', '').str.replace(',', '').astype(float)
+    data['actual_price'] = data['actual_price'].str.replace(
+        '₹', '').str.replace(',', '').astype(float)
 
-    df['rating_count'] = df['rating_count'].str.replace(',', '').astype(int)
-    df['product_name'] = df['product_name'].str.lower()
+    data['rating'] = pd.to_numeric(data['rating'], errors='coerce')
+    data.dropna(inplace=True)
 
-    df['discount_percentage'] = df['discount_percentage'].str.rstrip('%').astype(float)
+    data['rating_count'] = data['rating_count'].str.replace(',', '').astype(int)
+    data['product_name'] = data['product_name'].str.lower()
 
-    df['about_product'] = df['about_product'].str.replace('[^\w\s]', '').str.lower()
-    df['review_title'] = df['review_title'].str.replace('[^\w\s]', '').str.lower()
-    df['review_content'] = df['review_content'].str.replace('[^\w\s]', '').str.lower()
+    data['discount_percentage'] = data['discount_percentage'].str.rstrip('%').astype(float)
 
-    return df
+    data['about_product'] = data['about_product'].str.replace(r'[^\w\s]', '').str.lower()
+    data['review_title'] = data['review_title'].str.replace(r'[^\w\s]', '').str.lower()
+    data['review_content'] = data['review_content'].str.replace(r'[^\w\s]', '').str.lower()
 
-def split_users(row):
+    return data
+
+
+def split_users(row: pd.Series) -> pd.DataFrame:
+    """Splits user information in a DataFrame row and creates new rows for each user.
+
+    Args:
+        row (pd.Series): Input row containing user information.
+
+    Returns:
+        pd.DataFrame: DataFrame with each user information split into separate rows.
+    """
     user_ids = row['user_id'].split(',')
     user_names = row['user_name'].split(',')
     review_titles = row['review_title'].split(',')
@@ -35,18 +54,41 @@ def split_users(row):
         rows.append(row_copy)
     return pd.DataFrame(rows)
 
-def extract_first_last(category) -> Tuple:
+
+def extract_first_last(category: str) -> Tuple[str, str]:
+    """Extracts the first and last items from a string of categories separated by '|'.
+
+    Args:
+        category (str): String containing categories separated by '|'.
+
+    Returns:
+        Tuple[str, str]: Tuple containing the first and last categories.
+    """
     categories = category.split('|')
     first_item = categories[0]
     last_item = categories[-1]
     return first_item, last_item
 
-def one_hot_encoding(df: pd.DataFrame) -> pd.DataFrame:
-    df.drop(columns=['product_name','img_link','product_link'],inplace=True)
-    one_hot_encoded = pd.get_dummies(df['First_category'], prefix='first_category')
+
+def one_hot_encoding(data: pd.DataFrame) -> pd.DataFrame:
+    """Performs one-hot encoding on the 'First_category' column of the DataFrame.
+
+    Args:
+        data (pd.DataFrame): Input DataFrame.
+
+    Returns:
+        pd.DataFrame: DataFrame with one-hot encoded 'First_category' column.
+    """
+    data.drop(columns=['product_name', 'img_link', 'product_link'], inplace=True)
+    one_hot_encoded = pd.get_dummies(data['First_category'], prefix='first_category')
 
     # Concatenate one-hot encoded columns with the original dataframe
-    df_with_one_hot = pd.concat([df.drop(columns=['First_category','Last_category','rating_count',\
-                                                  'review_id','about_product','actual_price','review_content']),\
-                                                  one_hot_encoded], axis=1)
-    return df_with_one_hot
+    data_with_one_hot = pd.concat([data.drop(columns=['First_category',
+                                                      'Last_category',
+                                                      'rating_count',
+                                                    'review_id',
+                                                    'about_product',
+                                                    'actual_price',
+                                                    'review_content']),
+                                 one_hot_encoded], axis=1)
+    return data_with_one_hot

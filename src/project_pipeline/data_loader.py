@@ -1,11 +1,14 @@
-import pandas as pd
+""" Module to read data"""
 from pathlib import Path
 import logging
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 def read_data(file_path: Path):
-    df = pd.read_csv(file_path)
+    """Function to load in data
+    Arguments: Path to file to be read
+    Returns: pandas dataframe """
+    data= pd.read_csv(file_path)
     logger.info("Get data successfully from the %s", file_path)
-    return df
-
+    return data
