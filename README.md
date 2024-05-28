@@ -31,6 +31,10 @@ AWS_SECRET_ACCESS_KEY=
 
 AWS_REGION=
 
+* Run the Python Application for Model Training:
+```bash
+ python3 pipeline.py --config config/default.yaml
+```
 
 * Run the Streamlit Application: 
 ```bash
