@@ -16,6 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Expose the port streamlit runs on
 EXPOSE 8501
 
-# Run app.py when the container launches
-CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+# Install supervisor
+RUN apt-get update && apt-get install -y supervisor && rm -rf /var/lib/apt/lists/*
 
+# Copy supervisor configuration file
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Run supervisord when the container launches
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
